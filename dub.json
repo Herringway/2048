@@ -1,0 +1,9 @@
+{
+	"authors": [
+		"elpen"
+	],
+	"copyright": "Copyright © 2021, elpen",
+	"description": "2048 clone",
+	"license": "proprietary",
+	"name": "2048"
+}

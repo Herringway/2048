@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/2048
+2048.so
+2048.dylib
+2048.dll
+2048.a
+2048.lib
+2048-test-*
+*.exe
+*.o
+*.obj
+*.lst
