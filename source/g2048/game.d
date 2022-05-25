@@ -5,7 +5,7 @@ struct Grid {
 	private uint[][] data;
 	private size_t[] shuffleBuffer;
 	private Random rng;
-	this(uint size) {
+	this(uint size) @safe {
 		import std.array : array;
 		import std.range : iota;
 		data = new uint[][](size, size);
@@ -14,10 +14,10 @@ struct Grid {
 		advance();
 		advance();
 	}
-	auto view() const pure {
+	auto view() const pure @safe {
 		return data;
 	}
-	bool moveRight() pure {
+	bool moveRight() pure @safe {
 		foreach (rowIdx, ref row; data) {
 			foreach (colIdx, ref cell; row[1 .. $]) {
 				auto to = Coordinates(rowIdx, colIdx + 1);
@@ -34,7 +34,7 @@ struct Grid {
 		}
 		return advance();
 	}
-	bool moveLeft() pure {
+	bool moveLeft() pure @safe {
 		foreach (rowIdx, ref row; data) {
 			foreach_reverse (colIdx, ref cell; row[0 ..$ - 1]) {
 				auto to = Coordinates(rowIdx, colIdx);
@@ -51,7 +51,7 @@ struct Grid {
 		}
 		return advance();
 	}
-	bool moveDown() pure {
+	bool moveDown() pure @safe {
 		foreach (rowIdx, ref row; data[1 .. $]) {
 			foreach (colIdx, ref cell; row) {
 				auto to = Coordinates(rowIdx + 1, colIdx);
@@ -68,7 +68,7 @@ struct Grid {
 		}
 		return advance();
 	}
-	bool moveUp() pure {
+	bool moveUp() pure @safe {
 		foreach_reverse (rowIdx, ref row; data[0 .. $ - 1]) {
 			foreach (colIdx, ref cell; row) {
 				auto to = Coordinates(rowIdx, colIdx);
@@ -85,7 +85,7 @@ struct Grid {
 		}
 		return advance();
 	}
-	bool advance() pure {
+	bool advance() pure @safe {
 		import std.random : dice, randomShuffle;
 		randomShuffle(shuffleBuffer, rng);
 		foreach (location; shuffleBuffer) {
@@ -97,19 +97,19 @@ struct Grid {
 		}
 		return true;
 	}
-	private ref uint getCell(Coordinates coords) pure
+	private ref uint getCell(Coordinates coords) pure @safe
 		in(coords.x < data.length)
 		in(coords.y < data[0].length)
 	{
 		return data[coords.x][coords.y];
 	}
-	private void mergeSame(Coordinates from, Coordinates to) pure {
+	private void mergeSame(Coordinates from, Coordinates to) pure @safe {
 		if (getCell(from) == getCell(to)) {
 			getCell(to) = getCell(from)*2;
 			getCell(from) = 0;
 		}
 	}
-	private void moveEmpty(Coordinates from, Coordinates to) pure {
+	private void moveEmpty(Coordinates from, Coordinates to) pure @safe {
 		if (getCell(to) == 0) {
 			getCell(to) = getCell(from);
 			getCell(from) = 0;
@@ -120,8 +120,4 @@ struct Grid {
 private struct Coordinates {
 	size_t x;
 	size_t y;
-	string toString() const {
-		import std.format : format;
-		return format!"(%d, %d)"(x,y);
-	}
 }
