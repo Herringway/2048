@@ -1,162 +1,100 @@
 import std;
-import core.sys.windows.windows;
+import core.thread;
 import g2048.game;
+import safersdl;
+import std.experimental.logger;
+
+enum backgroundColour = Colour(64, 64, 160, 255);
+
+enum width = 800;
+enum height = 800;
+
+Grid game;
+GameState state;
 
 void main() {
-	auto game = Grid(5);
+	graphics.initialize("2048", width, height, width, height);
+	loadAssets();
+	input.initialize();
+	auto logic = new Fiber(&gameLogic);
+	auto draw = new Fiber(&drawGame);
+	while(logic.state != Fiber.State.TERM) {
+		graphics.startFrame();
+		logic.call();
+		draw.call();
+		graphics.flip();
+		graphics.waitForNextFrame();
+	}
+}
 
-	outer: while(true) {
-		printGrid(game);
-		foreach (event; readEvent()) {
-			if (event.isInput) {
-				final switch (game.oneStep(event.input)) {
-					case GameState.exiting:
-						break outer;
-					case GameState.lost:
-						writeln("Game over!");
-						break outer;
-					case GameState.running:
-						break;
-				}
+void loadAssets() {
+	graphics.loadFont("DejaVuSerif.ttf");
+}
+
+void reset() {
+	game = Grid(4);
+}
+
+void gameLogic() {
+	reset();
+	while (true) {
+		if (input.update() || input.isPressed(KeyboardKey.escape)) {
+			break;
+		}
+		if (input.isPressed(KeyboardKey.leftArrow)) {
+			state = game.moveLeft() ? GameState.running : GameState.lost;
+		} else if (input.isPressed(KeyboardKey.rightArrow)) {
+			state = game.moveRight() ? GameState.running : GameState.lost;
+		} else if (input.isPressed(KeyboardKey.upArrow)) {
+			state = game.moveUp() ? GameState.running : GameState.lost;
+		} else if (input.isPressed(KeyboardKey.downArrow)) {
+			state = game.moveDown() ? GameState.running : GameState.lost;
+		}
+		Fiber.yield();
+	}
+}
+void drawGame() {
+	while (true) {
+		graphics.setColor(backgroundColour);
+		graphics.drawRect(0, 0, width, height);
+		enum sqWidth = width / 5;
+		enum sqAlignX = width / 4;
+		enum sqHeight = height / 5;
+		enum sqAlignY = height / 4;
+		foreach (x, row; game.view) {
+			foreach (y, num; row) {
+				const sqX = cast(int)(sqAlignY * y) + (sqAlignY - sqHeight) / 2;
+				const sqY = cast(int)(sqAlignX * x) + (sqAlignX - sqWidth) / 2;
+				const textX = cast(int)(sqAlignY * y) + sqAlignY / 2;
+				const textY = cast(int)(sqAlignX * x) + sqAlignX / 2;
+				graphics.setColor(colour(num));
+				graphics.drawRect(cast(int)sqX, sqY, sqWidth, sqHeight);
+				graphics.setColor(Colour(0, 0, 0, 255));
+				graphics.drawInt(num, textX, textY);
 			}
 		}
-		writef!"\x1B[%dF"(game.view.length * 2 + 1);
+		Fiber.yield();
 	}
 }
 
-GameState oneStep(Grid game, Input input) {
-	final switch (input) {
-		case Input.left:
-			return game.moveLeft() ? GameState.running : GameState.lost;
-		case Input.right:
-			return game.moveRight() ? GameState.running : GameState.lost;
-		case Input.up:
-			return game.moveUp() ? GameState.running : GameState.lost;
-		case Input.down:
-			return game.moveDown() ? GameState.running : GameState.lost;
-		case Input.quit:
-			return GameState.exiting;
-	}
-}
-
-void printGrid(in Grid grid) {
-	enum Row {
-		top,
-		middle,
-		bottom
-	}
-
-	static immutable dchar[] leftConnectorChars = [
-		'┌',
-		'├',
-		'└'
-	];
-	static immutable dchar[] middleConnectorChars = [
-		'┬',
-		'┼',
-		'┴'
-	];
-	static immutable dchar[] rightConnectorChars = [
-		'┐',
-		'┤',
-		'┘'
-	];
-	void printRow(Row row, size_t cells, size_t width) {
-		write(leftConnectorChars[row]);
-		foreach (_; 0 .. cells) {
-			writef!"%-(%s%)"("─".repeat(width));
-			if (_ == cells - 1) {
-				writeln(rightConnectorChars[row]);
-			} else {
-				write(middleConnectorChars[row]);
-			}
-		}
-	}
-	printRow(Row.top, grid.view[0].length, 10);
-	foreach (idx, row; grid.view) {
-		write("│");
-		foreach (colour, num; zip(row.colours, row)) {
-			writef!"\x1B[38;5;%dm% 10d\x1B[0m│"(colour, num);
-		}
-		writeln();
-		printRow(idx == grid.view.length - 1 ? Row.bottom : Row.middle, row.length, 10);
-	}
-}
-
-auto colours(const uint[] nums) {
-	return nums.map!(x => x.colour);
-}
-
-auto colour(uint num) {
+Colour colour(uint num) {
 	switch (num) {
-		case 2^^1: return 1;
-		case 2^^2: return 2;
-		case 2^^3: return 3;
-		case 2^^4: return 4;
-		case 2^^5: return 5;
-		case 2^^6: return 6;
-		case 2^^7: return 7;
-		case 2^^8: return 8;
-		case 2^^9: return 9;
-		case 2^^10: return 10;
-		case 2^^11: return 11;
-		default: return 255;
+		case 2^^1: return Colour(170, 0, 0, 255);
+		case 2^^2: return Colour(0, 170, 0, 255);
+		case 2^^3: return Colour(170, 85, 0, 255);
+		case 2^^4: return Colour(0, 0, 170, 255);
+		case 2^^5: return Colour(170, 0, 170, 255);
+		case 2^^6: return Colour(0, 170, 170, 255);
+		case 2^^7: return Colour(170, 170, 170, 255);
+		case 2^^8: return Colour(85, 85, 85, 255);
+		case 2^^9: return Colour(255, 85, 85, 255);
+		case 2^^10: return Colour(85, 255, 85, 255);
+		case 2^^11: return Colour(255, 255, 85, 255);
+		default: return Colour(0, 0, 0, 255);
 	}
-}
-
-enum Input {
-	left,
-	right,
-	up,
-	down,
-	quit
 }
 
 enum GameState {
 	running,
-	lost,
-	exiting
-}
-
-struct Event {
-	bool isInput;
-	Input input;
-}
-
-Event[] readEvent() {
-	Event[] result;
-	version(Windows) {
-		INPUT_RECORD[32] buf;
-		DWORD numEvents;
-		enforce(ReadConsoleInputW(GetStdHandle(STD_INPUT_HANDLE), buf.ptr, buf.length, &numEvents), "Unable to read events");
-		foreach (event; buf[0 .. numEvents]) {
-			switch (event.EventType) {
-				case KEY_EVENT:
-					auto keyEvent = event.KeyEvent;
-					if (!keyEvent.bKeyDown) {
-						switch (keyEvent.wVirtualKeyCode) {
-							case VK_LEFT:
-								result ~= Event(true, Input.left);
-								break;
-							case VK_UP:
-								result ~= Event(true, Input.up);
-								break;
-							case VK_DOWN:
-								result ~= Event(true, Input.down);
-								break;
-							case VK_RIGHT:
-								result ~= Event(true, Input.right);
-								break;
-							case 'Q':
-								result ~= Event(true, Input.quit);
-								break;
-							default: break;
-						}
-					}
-					break;
-				default: break;
-			}
-		}
-	}
-	return result;
+	lost
 }
