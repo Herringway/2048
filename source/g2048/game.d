@@ -1,7 +1,7 @@
 module g2048.game;
 
 struct Grid {
-	import std.random : Random;
+	import std.random : Random, unpredictableSeed;
 	private uint[][] data;
 	private size_t[] shuffleBuffer;
 	private Random rng;
@@ -10,7 +10,7 @@ struct Grid {
 		import std.range : iota;
 		data = new uint[][](size, size);
 		shuffleBuffer = iota!size_t(size*size).array;
-		rng = Random();
+		rng = Random(unpredictableSeed);
 		advance();
 		advance();
 	}
