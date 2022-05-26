@@ -13,3 +13,7 @@ docs/
 *.o
 *.obj
 *.lst
+*.dll
+*.pdb
+.vs
+dub.selections.json
